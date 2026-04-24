@@ -59,10 +59,10 @@ def predict(player_id, opponent, lines):
 if __name__ == "__main__":
 
     res = predict(
-        player_id=1628369,
-        opponent="PHI",
-        lines={"PTS": 20, "REB": 10, "AST": 5}
+        player_id=2544,
+        opponent="HOU",
+        lines={"PTS": 20, "REB": 7, "AST": 7}
     )
 
 
-print_predictions(res, player_name="Jayson Tatum")
+print_predictions(res, player_name="Lebron James")
