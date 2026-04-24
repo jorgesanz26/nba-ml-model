@@ -3,7 +3,7 @@ import time
 from nba_api.stats.static import players
 from nba_api.stats.endpoints import playergamelog
 from config import SEASONS, USE_ALL_PLAYERS, LIMIT_PLAYERS, DATA_PATH
-
+from tqdm import tqdm
 
 def get_players():
 
@@ -22,7 +22,7 @@ def download():
 
     dfs = []
 
-    for p in player_list:
+    for p in tqdm(player_list, desc="Downloading NBA players"):
         pid = p["id"]
 
         for season in SEASONS:
