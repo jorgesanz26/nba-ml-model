@@ -1,9 +1,26 @@
 from nba_api.stats.static import players
+import pandas as pd
 
-# Lista de todos los jugadores
+# Obtener jugadores
 nba_players = players.get_players()
 
-# Buscar uno en concreto
-player = [p for p in nba_players if p['full_name'] == 'LeBron James'][0]
+data = []
 
-print(player)
+for p in nba_players:
+    full_name = p['full_name'].split()
+    nombre = full_name[0]
+    apellidos = " ".join(full_name[1:]) if len(full_name) > 1 else ""
+    
+    data.append({
+        "Nombre": nombre,
+        "Apellidos": apellidos,
+        "ID": p['id']
+    })
+
+# Crear DataFrame
+df = pd.DataFrame(data)
+
+# Guardar a CSV
+df.to_csv("nba_players.csv", index=False, encoding="utf-8")
+
+print("Archivo generado: nba_players.csv")
