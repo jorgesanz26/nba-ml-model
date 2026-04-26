@@ -1,19 +1,18 @@
-def print_predictions(result, player_name="PLAYER"):
+def print_best_picks(results, threshold=0.6):
 
+    for player in results:
+        best = []
 
-    print(f"🏀 {player_name.upper()} 🏀")
+        for stat, values in player["predictions"].items():
+            for v in values:
+                if v["prob_over"] >= threshold:
+                    best.append((stat, v))
 
+        if best:
+            print(f"\n🔥 {player['player_name']}")
 
-    for stat, data in result.items():
-
-        pred = data["prediction"]
-        line = data["line"]
-        p_over = data["prob_over"]
-
-        direction = "🔼 OVER" if p_over > 0.5 else "🔽 UNDER"
-
-        print(f"📊 {stat}")
-        print(f"   Prediction: {pred:.2f}")
-        print(f"   Line: {line}")
-        print(f"   Over probability: {p_over*100:.1f}% {direction}")
-        print("-" * 40)
+            for stat, v in best:
+                print(
+                    f"  {stat} > {v['line']} "
+                    f"(prob: {v['prob_over']}, pred: {v['prediction']})"
+                )

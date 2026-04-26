@@ -1,26 +1,12 @@
-from nba_api.stats.static import players
+from nba_api.stats.endpoints import leaguedashplayerstats
 import pandas as pd
 
-# Obtener jugadores
-nba_players = players.get_players()
+df = leaguedashplayerstats.LeagueDashPlayerStats(timeout=60).get_data_frames()[0]
 
-data = []
+df_players = df[["PLAYER_ID", "PLAYER_NAME", "TEAM_ABBREVIATION"]]
 
-for p in nba_players:
-    full_name = p['full_name'].split()
-    nombre = full_name[0]
-    apellidos = " ".join(full_name[1:]) if len(full_name) > 1 else ""
-    
-    data.append({
-        "Nombre": nombre,
-        "Apellidos": apellidos,
-        "ID": p['id']
-    })
+df_players.rename(columns={"TEAM_ABBREVIATION": "TEAM"}, inplace=True)
 
-# Crear DataFrame
-df = pd.DataFrame(data)
+df_players.to_csv("data/players_with_team.csv", index=False)
 
-# Guardar a CSV
-df.to_csv("nba_players.csv", index=False, encoding="utf-8")
-
-print("Archivo generado: nba_players.csv")
+print("OK")

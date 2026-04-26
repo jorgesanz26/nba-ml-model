@@ -1,41 +1,77 @@
 import pandas as pd
 import joblib
-
 from xgboost import XGBRegressor
-from sklearn.multioutput import MultiOutputRegressor
-
 from config import DATA_PATH, MODEL_PATH
 
 
-def train():
+def add_features(df):
 
-    df = pd.read_parquet(DATA_PATH)
+    df = df.sort_values(["PLAYER_ID", "GAME_DATE"])
+    df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
 
-    features = [
-        "last5_pts",
-        "last5_reb",
-        "last5_ast",
-        "last5_min",
-        "fatigue"
-    ] + [c for c in df.columns if c.startswith("OPP_")]
+    df["rest_days"] = df.groupby("PLAYER_ID")["GAME_DATE"].diff().dt.days.fillna(3)
+    df["back_to_back"] = (df["rest_days"] == 1).astype(int)
 
-    X = df[features]
-    y = df[["y_pts", "y_reb", "y_ast"]]
+    df["season_avg_pts"] = df.groupby("PLAYER_ID")["PTS"].transform(lambda x: x.rolling(20, min_periods=5).mean())
+    df["season_avg_reb"] = df.groupby("PLAYER_ID")["REB"].transform(lambda x: x.rolling(20, min_periods=5).mean())
+    df["season_avg_ast"] = df.groupby("PLAYER_ID")["AST"].transform(lambda x: x.rolling(20, min_periods=5).mean())
 
-    model = MultiOutputRegressor(
-        XGBRegressor(
-            n_estimators=500,
-            learning_rate=0.05,
-            max_depth=5
-        )
-    )
+    df["last5_avg_pts"] = df.groupby("PLAYER_ID")["PTS"].transform(lambda x: x.rolling(5, min_periods=1).mean())
 
-    model.fit(X, y)
+    df["form_trend"] = df["last5_avg_pts"] - df["season_avg_pts"]
 
-    joblib.dump(model, MODEL_PATH)
+    df["usage_proxy"] = df.groupby("PLAYER_ID")["MIN"].transform(lambda x: x.rolling(10, min_periods=1).mean())
 
-    print("Modelo guardado")
+    return df
 
 
-if __name__ == "__main__":
-    train()
+# -------------------------
+# DATA
+# -------------------------
+
+df = pd.read_parquet(DATA_PATH)
+df = add_features(df)
+
+opp_cols = [c for c in df.columns if c.startswith("OPP_")]
+
+features = [
+    "last5_pts",
+    "last5_reb",
+    "last5_ast",
+    "last5_min",
+    "fatigue",
+
+    "rest_days",
+    "back_to_back",
+
+    "season_avg_pts",
+    "season_avg_reb",
+    "season_avg_ast",
+
+    "form_trend",
+    "usage_proxy",
+] + opp_cols
+
+
+X = df[features]
+y = df[["PTS", "REB", "AST"]]
+
+
+# -------------------------
+# MODEL
+# -------------------------
+
+model = XGBRegressor(
+    n_estimators=300,
+    learning_rate=0.05,
+    max_depth=5,
+    subsample=0.8,
+    colsample_bytree=0.8,
+    random_state=42
+)
+
+model.fit(X, y)
+
+joblib.dump(model, MODEL_PATH)
+
+print("Modelo XGBoost entrenado correctamente")

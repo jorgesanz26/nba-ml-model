@@ -2,18 +2,16 @@ import pandas as pd
 import time
 from nba_api.stats.static import players
 from nba_api.stats.endpoints import playergamelog
-from config import SEASONS, USE_ALL_PLAYERS, LIMIT_PLAYERS, DATA_PATH
+from config import SEASONS, USE_ALL_PLAYERS, LIMIT_PLAYERS
 from tqdm import tqdm
+
 
 def get_players():
 
     all_players = players.get_players()
     active = [p for p in all_players if p["is_active"]]
 
-    if USE_ALL_PLAYERS:
-        return active
-
-    return active[:LIMIT_PLAYERS]
+    return active if USE_ALL_PLAYERS else active[:LIMIT_PLAYERS]
 
 
 def download():
@@ -23,9 +21,11 @@ def download():
     dfs = []
 
     for p in tqdm(player_list, desc="Downloading NBA players"):
+
         pid = p["id"]
 
         for season in SEASONS:
+
             try:
                 df = playergamelog.PlayerGameLog(
                     player_id=pid,
@@ -42,10 +42,25 @@ def download():
             except:
                 continue
 
-    df = pd.concat(dfs)
-    df.to_parquet(DATA_PATH)
+    df = pd.concat(dfs, ignore_index=True)
 
-    print("Dataset guardado en:", DATA_PATH)
+    # -------------------------
+    # CLEANING CRÍTICO
+    # -------------------------
+
+    df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"])
+
+    df["MATCHUP"] = df["MATCHUP"].str.upper()
+
+    df["OPP"] = df["MATCHUP"].str.split(" ").str[-1]
+
+    df["IS_HOME"] = df["MATCHUP"].str.contains(" VS ").astype(int)
+
+    df = df.drop_duplicates()
+
+    df.to_parquet("data/raw_games.parquet")
+
+    print("Dataset guardado correctamente")
 
 
 if __name__ == "__main__":
